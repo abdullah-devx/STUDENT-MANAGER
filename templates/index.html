@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة الدرجات</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #475569;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Tajawal',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);
+    background-size:40px 40px;
+    pointer-events:none; z-index:0;
+  }
+  .container { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:2rem 1.5rem; }
+
+  header { text-align:center; margin-bottom:2.5rem; animation:fadeDown .6s ease; }
+  header .badge {
+    display:inline-block;
+    background:rgba(59,130,246,0.1);
+    border:1px solid rgba(59,130,246,0.3);
+    color:var(--accent);
+    font-size:.75rem; padding:.3rem 1rem;
+    border-radius:20px; letter-spacing:.1em; margin-bottom:1rem;
+  }
+  header h1 {
+    font-size:2.5rem; font-weight:800;
+    background:linear-gradient(135deg,#e2e8f0 0%,#3b82f6 50%,#06b6d4 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text; line-height:1.2; margin-bottom:.5rem;
+  }
+  header p { color:var(--text2); font-size:1rem; }
+
+  .stats-bar { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:2rem; animation:fadeUp .6s ease .1s both; }
+  .stat-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:1.2rem 1.5rem;
+    display:flex; align-items:center; gap:1rem;
+    transition:border-color .2s;
+  }
+  .stat-card:hover { border-color:rgba(59,130,246,.4); }
+  .stat-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+  .stat-icon.blue  { background:rgba(59,130,246,.15); }
+  .stat-icon.green { background:rgba(16,185,129,.15); }
+  .stat-icon.amber { background:rgba(245,158,11,.15); }
+  .stat-value { font-size:1.8rem; font-weight:800; line-height:1; }
+  .stat-label { font-size:.8rem; color:var(--text2); margin-top:.2rem; }
+
+  .main-grid { display:grid; grid-template-columns:340px 1fr; gap:1.5rem; animation:fadeUp .6s ease .2s both; }
+
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .panel-header { padding:1.2rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:.75rem; }
+  .panel-header .dot { width:8px; height:8px; border-radius:50%; }
+  .panel-header h2 { font-size:.95rem; font-weight:600; }
+  .panel-body { padding:1.5rem; }
+
+  .form-group { margin-bottom:1rem; }
+  label { display:block; font-size:.8rem; color:var(--text2); margin-bottom:.4rem; font-weight:500; }
+  input {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:8px; padding:.65rem 1rem; color:var(--text);
+    font-family:'Tajawal',sans-serif; font-size:.95rem;
+    transition:border-color .2s,box-shadow .2s; outline:none;
+  }
+  input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+  input::placeholder { color:var(--text3); }
+
+  .btn {
+    width:100%; padding:.7rem 1rem; border:none; border-radius:8px;
+    font-family:'Tajawal',sans-serif; font-size:.95rem; font-weight:600;
+    cursor:pointer; transition:all .2s;
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+  }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#2563eb; transform:translateY(-1px); box-shadow:0 4px 20px rgba(59,130,246,.3); }
+  .btn-secondary { background:transparent; color:var(--accent2); border:1px solid rgba(6,182,212,.3); margin-top:.6rem; }
+  .btn-secondary:hover { background:rgba(6,182,212,.08); border-color:var(--accent2); }
+  .btn:disabled { opacity:.5; cursor:not-allowed; transform:none !important; }
+
+  .search-bar { padding:1rem 1.5rem; border-bottom:1px solid var(--border); }
+  .search-wrapper { position:relative; }
+  .search-wrapper::before { content:'🔍'; position:absolute; right:.75rem; top:50%; transform:translateY(-50%); font-size:.8rem; pointer-events:none; }
+
+  .students-list { overflow-y:auto; max-height:460px; padding:.75rem; }
+  .students-list::-webkit-scrollbar { width:4px; }
+  .students-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  .student-card {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:12px; padding:1rem 1.2rem; margin-bottom:.6rem;
+    cursor:pointer; transition:all .2s; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .student-card::before { content:''; position:absolute; right:0; top:0; bottom:0; width:3px; background:transparent; transition:background .2s; }
+  .student-card:hover { border-color:rgba(59,130,246,.4); transform:translateX(-2px); }
+  .student-card:hover::before { background:var(--accent); }
+  .student-card.active { border-color:var(--accent); background:rgba(59,130,246,.08); }
+  .student-card.active::before { background:var(--accent); }
+  .student-card-info { flex:1; }
+  .student-name { font-size:1rem; font-weight:700; margin-bottom:.4rem; }
+  .student-meta { display:flex; align-items:center; gap:.5rem; }
+  .badge-result { display:inline-block; padding:.15rem .6rem; border-radius:20px; font-size:.72rem; font-weight:700; }
+  .grade-avg { font-size:.8rem; color:var(--text2); }
+  .delete-student-btn {
+    background:none; border:none; color:var(--text3);
+    cursor:pointer; padding:.3rem .5rem; border-radius:6px;
+    font-size:.85rem; transition:all .2s; flex-shrink:0;
+  }
+  .delete-student-btn:hover { color:var(--danger); background:rgba(239,68,68,.1); }
+
+  .detail-panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; display:flex; flex-direction:column; }
+  .detail-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text3); padding:3rem; text-align:center; }
+  .detail-empty .icon { font-size:3rem; margin-bottom:1rem; opacity:.4; }
+  .detail-empty p { font-size:.9rem; }
+  .detail-content { display:none; flex-direction:column; height:100%; }
+  .detail-content.show { display:flex; }
+
+  .detail-top { padding:1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; }
+  .avatar {
+    width:52px; height:52px; border-radius:14px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; font-weight:800; color:#fff; flex-shrink:0;
+  }
+  .detail-name { font-size:1.3rem; font-weight:800; }
+  .detail-sub  { font-size:.85rem; color:var(--text2); margin-top:.2rem; }
+  .result-badge-large { margin-right:auto; padding:.4rem 1rem; border-radius:8px; font-size:.9rem; font-weight:700; }
+
+  .score-ring-wrap { padding:1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:2rem; }
+  .score-ring { position:relative; width:90px; height:90px; flex-shrink:0; }
+  .score-ring svg { transform:rotate(-90deg); }
+  .ring-bg  { fill:none; stroke:var(--surface2); stroke-width:8; }
+  .ring-fill { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1); }
+  .ring-text { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-number { font-size:1.4rem; font-weight:800; }
+  .ring-label  { font-size:.6rem; color:var(--text2); }
+  .score-details { flex:1; }
+  .score-row { display:flex; align-items:center; gap:.75rem; margin-bottom:.75rem; }
+  .score-bar-wrap { flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+  .score-bar { height:100%; border-radius:3px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+  .score-subject { font-size:.82rem; color:var(--text2); min-width:80px; }
+  .score-num { font-size:.82rem; font-weight:700; min-width:32px; text-align:center; }
+
+  .grades-section { flex:1; padding:1.5rem; overflow-y:auto; }
+  .grades-section h3 { font-size:.85rem; color:var(--text2); margin-bottom:1rem; font-weight:500; text-transform:uppercase; letter-spacing:.05em; }
+  .grade-row {
+    display:flex; align-items:center; padding:.75rem 1rem;
+    border-radius:8px; margin-bottom:.4rem;
+    background:var(--surface2); border:1px solid transparent;
+    transition:border-color .2s; animation:slideIn .3s ease;
+  }
+  .grade-row:hover { border-color:var(--border); }
+  .grade-subject { flex:1; font-size:.9rem; font-weight:600; }
+  .grade-score-pill { padding:.2rem .75rem; border-radius:20px; font-size:.82rem; font-weight:700; }
+  .del-grade-btn {
+    background:none; border:none; color:var(--text3);
+    cursor:pointer; padding:.2rem .4rem; margin-right:.5rem;
+    border-radius:4px; font-size:.8rem; transition:all .2s;
+  }
+  .del-grade-btn:hover { color:var(--danger); background:rgba(239,68,68,.1); }
+
+  .toast {
+    position:fixed; bottom:2rem; left:50%;
+    transform:translateX(-50%) translateY(80px);
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:.75rem 1.5rem;
+    font-size:.9rem; color:var(--text); z-index:100;
+    transition:transform .3s ease,opacity .3s ease;
+    opacity:0; white-space:nowrap;
+    box-shadow:0 8px 32px rgba(0,0,0,.4);
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+  .empty-list { text-align:center; padding:2rem 1rem; color:var(--text3); font-size:.85rem; }
+  .loading { text-align:center; padding:2rem; color:var(--text3); font-size:.85rem; }
+
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(20px)}  to{opacity:1;transform:translateY(0)} }
+  @keyframes slideIn  { from{opacity:0;transform:translateX(10px)}  to{opacity:1;transform:translateX(0)} }
+
+  /* confirm dialog */
+  .confirm-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.6);
+    display:flex; align-items:center; justify-content:center;
+    z-index:200; opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  .confirm-overlay.show { opacity:1; pointer-events:all; }
+  .confirm-box {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:2rem; max-width:360px; width:90%;
+    text-align:center;
+  }
+  .confirm-box h3 { font-size:1.1rem; margin-bottom:.75rem; }
+  .confirm-box p  { font-size:.9rem; color:var(--text2); margin-bottom:1.5rem; }
+  .confirm-btns { display:flex; gap:.75rem; }
+  .btn-danger { background:var(--danger); color:#fff; flex:1; }
+  .btn-danger:hover { background:#dc2626; }
+  .btn-cancel { background:var(--surface2); color:var(--text2); border:1px solid var(--border); flex:1; }
+  .btn-cancel:hover { border-color:var(--text3); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">STUDENT GRADE MANAGER</div>
+    <h1>نظام إدارة الدرجات</h1>
+    <p>أضف الطلاب وتابع درجاتهم بسهولة</p>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-icon blue">👨‍🎓</div>
+      <div>
+        <div class="stat-value" id="stat-students">0</div>
+        <div class="stat-label">إجمالي الطلاب</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">📝</div>
+      <div>
+        <div class="stat-value" id="stat-grades">0</div>
+        <div class="stat-label">إجمالي الدرجات</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">⭐</div>
+      <div>
+        <div class="stat-value" id="stat-avg">—</div>
+        <div class="stat-label">متوسط الفصل</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- Left -->
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot" style="background:#3b82f6"></div>
+          <h2>إضافة طالب</h2>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label>اسم الطالب</label>
+            <input type="text" id="student-name" placeholder="مثال: أحمد محمد">
+          </div>
+          <button class="btn btn-primary" id="btn-add-student" onclick="addStudent()">➕ إضافة طالب</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot" style="background:#06b6d4"></div>
+          <h2>إضافة درجة</h2>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label>اسم الطالب</label>
+            <input type="text" id="grade-student" placeholder="اسم الطالب">
+          </div>
+          <div class="form-group">
+            <label>المادة</label>
+            <input type="text" id="grade-subject" placeholder="مثال: رياضيات">
+          </div>
+          <div class="form-group">
+            <label>الدرجة (0–100)</label>
+            <input type="number" id="grade-score" placeholder="85" min="0" max="100">
+          </div>
+          <button class="btn btn-secondary" id="btn-add-grade" onclick="addGrade()">📊 إضافة درجة</button>
+        </div>
+      </div>
+
+      <div class="panel" style="flex:1">
+        <div class="panel-header">
+          <div class="dot" style="background:#10b981"></div>
+          <h2>الطلاب</h2>
+        </div>
+        <div class="search-bar">
+          <div class="search-wrapper">
+            <input type="text" id="search-input" placeholder="ابحث عن طالب..." oninput="renderList()">
+          </div>
+        </div>
+        <div class="students-list" id="students-list">
+          <div class="loading">جاري التحميل...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Detail -->
+    <div class="detail-panel">
+      <div class="detail-empty" id="detail-empty">
+        <div class="icon">📋</div>
+        <p>اختر طالباً لعرض تفاصيله</p>
+      </div>
+      <div class="detail-content" id="detail-content">
+        <div class="detail-top">
+          <div class="avatar" id="detail-avatar">أ</div>
+          <div>
+            <div class="detail-name" id="detail-name">—</div>
+            <div class="detail-sub"  id="detail-sub">0 مادة</div>
+          </div>
+          <div class="result-badge-large badge-result" id="detail-result-badge">—</div>
+        </div>
+        <div class="score-ring-wrap">
+          <div class="score-ring">
+            <svg width="90" height="90" viewBox="0 0 90 90">
+              <defs>
+                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%"   stop-color="#3b82f6"/>
+                  <stop offset="100%" stop-color="#06b6d4"/>
+                </linearGradient>
+              </defs>
+              <circle class="ring-bg"   cx="45" cy="45" r="37"/>
+              <circle class="ring-fill" id="ring-fill" cx="45" cy="45" r="37"
+                stroke-dasharray="232.5" stroke-dashoffset="232.5" stroke="url(#ringGrad)"/>
+            </svg>
+            <div class="ring-text">
+              <div class="ring-number" id="ring-number">0</div>
+              <div class="ring-label">معدل</div>
+            </div>
+          </div>
+          <div class="score-details" id="score-details"></div>
+        </div>
+        <div class="grades-section">
+          <h3>سجل الدرجات</h3>
+          <div id="grades-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <h3 id="confirm-title">تأكيد الحذف</h3>
+    <p id="confirm-msg">هل أنت متأكد؟</p>
+    <div class="confirm-btns">
+      <button class="btn btn-cancel" onclick="closeConfirm()">إلغاء</button>
+      <button class="btn btn-danger" id="confirm-ok">حذف</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── state ───────────────────────────────────────────
+  let studentsData = {};
+  let activeStudent = null;
+
+  // ─── helpers ─────────────────────────────────────────
+  function getResult(avg) {
+    if (avg >= 90) return { label:'ممتاز',    color:'#10b981', bg:'rgba(16,185,129,.12)' };
+    if (avg >= 75) return { label:'جيد جداً', color:'#3b82f6', bg:'rgba(59,130,246,.12)' };
+    if (avg >= 60) return { label:'جيد',      color:'#06b6d4', bg:'rgba(6,182,212,.12)'  };
+    if (avg >= 50) return { label:'مقبول',    color:'#f59e0b', bg:'rgba(245,158,11,.12)' };
+    return              { label:'راسب',    color:'#ef4444', bg:'rgba(239,68,68,.12)'  };
+  }
+
+  function scoreColor(s) {
+    if (s >= 90) return '#10b981';
+    if (s >= 75) return '#3b82f6';
+    if (s >= 60) return '#06b6d4';
+    if (s >= 50) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  function showToast(msg, type='info') {
+    const icons = { success:'✅', error:'❌', info:'ℹ️' };
+    const t = document.getElementById('toast');
+    t.textContent = (icons[type]||'') + ' ' + msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function setLoading(btnId, state) {
+    const b = document.getElementById(btnId);
+    if (b) b.disabled = state;
+  }
+
+  // ─── confirm dialog ───────────────────────────────────
+  let confirmCallback = null;
+  function openConfirm(title, msg, cb) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent   = msg;
+    confirmCallback = cb;
+    document.getElementById('confirm-overlay').classList.add('show');
+  }
+  function closeConfirm() {
+    document.getElementById('confirm-overlay').classList.remove('show');
+    confirmCallback = null;
+  }
+  document.getElementById('confirm-ok').onclick = () => {
+    if (confirmCallback) confirmCallback();
+    closeConfirm();
+  };
+
+  // ─── API calls ────────────────────────────────────────
+  async function loadStudents() {
+    try {
+      const res  = await fetch('/students');
+      const data = await res.json();
+      studentsData = data.students || {};
+      document.getElementById('stat-students').textContent = data.total_students ?? 0;
+      document.getElementById('stat-grades').textContent   = data.total_grades   ?? 0;
+      document.getElementById('stat-avg').textContent      = data.class_average  ?? '—';
+      renderList();
+      if (activeStudent && studentsData[activeStudent]) {
+        renderDetail(activeStudent);
+      } else if (activeStudent) {
+        // student was deleted
+        activeStudent = null;
+        document.getElementById('detail-empty').style.display   = '';
+        document.getElementById('detail-content').classList.remove('show');
+      }
+    } catch {
+      showToast('تعذر الاتصال بالسيرفر', 'error');
+    }
+  }
+
+  async function addStudent() {
+    const inp  = document.getElementById('student-name');
+    const name = inp.value.trim();
+    if (!name) { showToast('أدخل اسم الطالب', 'error'); return; }
+    setLoading('btn-add-student', true);
+    try {
+      const res  = await fetch('/students', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ name })
+      });
+      const data = await res.json();
+      if (data.error) { showToast(data.error, 'error'); return; }
+      inp.value = '';
+      await loadStudents();
+      showToast(`تمت إضافة "${name}"`, 'success');
+    } catch { showToast('خطأ في الاتصال', 'error'); }
+    finally  { setLoading('btn-add-student', false); }
+  }
+
+  async function deleteStudent(name) {
+    openConfirm('حذف طالب', `هل تريد حذف "${name}" وكل درجاته؟`, async () => {
+      try {
+        const res  = await fetch(`/students/${encodeURIComponent(name)}`, { method:'DELETE' });
+        const data = await res.json();
+        if (data.error) { showToast(data.error, 'error'); return; }
+        if (activeStudent === name) activeStudent = null;
+        await loadStudents();
+        showToast(`تم حذف "${name}"`, 'info');
+      } catch { showToast('خطأ في الاتصال', 'error'); }
+    });
+  }
+
+  async function addGrade() {
+    const name    = document.getElementById('grade-student').value.trim();
+    const subject = document.getElementById('grade-subject').value.trim();
+    const score   = document.getElementById('grade-score').value;
+    if (!name || !subject || score === '') { showToast('أكمل جميع الحقول', 'error'); return; }
+    setLoading('btn-add-grade', true);
+    try {
+      const res  = await fetch('/grades', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ name, subject, score:parseFloat(score) })
+      });
+      const data = await res.json();
+      if (data.error) { showToast(data.error, 'error'); return; }
+      document.getElementById('grade-subject').value = '';
+      document.getElementById('grade-score').value   = '';
+      await loadStudents();
+      showToast(`تمت إضافة درجة "${subject}"`, 'success');
+    } catch { showToast('خطأ في الاتصال', 'error'); }
+    finally  { setLoading('btn-add-grade', false); }
+  }
+
+  async function deleteGrade(name, idx) {
+    try {
+      const res  = await fetch(`/grades/${encodeURIComponent(name)}/${idx}`, { method:'DELETE' });
+      const data = await res.json();
+      if (data.error) { showToast(data.error, 'error'); return; }
+      await loadStudents();
+      showToast('تم حذف الدرجة', 'info');
+    } catch { showToast('خطأ في الاتصال', 'error'); }
+  }
+
+  // ─── render ───────────────────────────────────────────
+  function renderList() {
+    const query = document.getElementById('search-input').value.toLowerCase();
+    const el    = document.getElementById('students-list');
+    const keys  = Object.keys(studentsData).filter(k => k.toLowerCase().includes(query));
+
+    if (!keys.length) {
+      el.innerHTML = '<div class="empty-list">لا يوجد طلاب</div>';
+      return;
+    }
+
+    el.innerHTML = keys.map(name => {
+      const s   = studentsData[name];
+      const res = getResult(s.average);
+      return `
+        <div class="student-card ${name === activeStudent ? 'active' : ''}" onclick="selectStudent('${name}')">
+          <div class="student-card-info">
+            <div class="student-name">${name}</div>
+            <div class="student-meta">
+              <span class="badge-result" style="background:${res.bg};color:${res.color}">${res.label}</span>
+              <span class="grade-avg">${s.grades.length ? s.average + ' معدل' : 'لا توجد درجات'}</span>
+            </div>
+          </div>
+          <button class="delete-student-btn" onclick="event.stopPropagation();deleteStudent('${name}')" title="حذف الطالب">✕</button>
+        </div>`;
+    }).join('');
+  }
+
+  function selectStudent(name) {
+    activeStudent = name;
+    renderList();
+    renderDetail(name);
+    document.getElementById('grade-student').value = name;
+  }
+
+  function renderDetail(name) {
+    const s   = studentsData[name];
+    if (!s) return;
+    const res = getResult(s.average);
+
+    document.getElementById('detail-empty').style.display = 'none';
+    document.getElementById('detail-content').classList.add('show');
+
+    document.getElementById('detail-avatar').textContent       = name[0];
+    document.getElementById('detail-name').textContent         = name;
+    document.getElementById('detail-sub').textContent          = s.grades.length + ' مادة';
+
+    const rb = document.getElementById('detail-result-badge');
+    rb.textContent    = res.label;
+    rb.style.background = res.bg;
+    rb.style.color      = res.color;
+
+    // ring
+    document.getElementById('ring-number').textContent = s.average;
+    const offset = 232.5 - (s.average / 100) * 232.5;
+    document.getElementById('ring-fill').style.strokeDashoffset = offset;
+    document.getElementById('ring-fill').style.stroke = res.color;
+
+    // bars
+    const det = document.getElementById('score-details');
+    det.innerHTML = s.grades.length
+      ? s.grades.map(g => `
+          <div class="score-row">
+            <span class="score-subject">${g.subject}</span>
+            <div class="score-bar-wrap">
+              <div class="score-bar" style="width:${g.score}%;background:${scoreColor(g.score)}"></div>
+            </div>
+            <span class="score-num" style="color:${scoreColor(g.score)}">${g.score}</span>
+          </div>`).join('')
+      : '<p style="color:var(--text3);font-size:.85rem">لا توجد درجات</p>';
+
+    // grades list
+    const gl = document.getElementById('grades-list');
+    gl.innerHTML = s.grades.length
+      ? s.grades.map((g, i) => `
+          <div class="grade-row">
+            <span class="grade-subject">${g.subject}</span>
+            <button class="del-grade-btn" onclick="deleteGrade('${name}',${i})" title="حذف">✕</button>
+            <span class="grade-score-pill" style="background:${getResult(g.score).bg};color:${scoreColor(g.score)}">${g.score}</span>
+          </div>`).join('')
+      : '<div class="empty-list">لا توجد درجات</div>';
+  }
+
+  // ─── keyboard shortcuts ───────────────────────────────
+  document.getElementById('student-name').addEventListener('keydown', e => e.key==='Enter' && addStudent());
+  document.getElementById('grade-score').addEventListener('keydown',  e => e.key==='Enter' && addGrade());
+
+  // ─── init ─────────────────────────────────────────────
+  loadStudents();
+</script>
+</body>
+</html>
